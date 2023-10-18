@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:tcp_socket_connection/tcp_socket_connection.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
   runApp(MyApp());
@@ -28,17 +29,23 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-  //Instantiating the class with the Ip and the PortNumber
+  // Obtain shared preferences.
+  final Future<SharedPreferences> prefs = SharedPreferences.getInstance();
   late TcpSocketConnection socketConnection;
   final textContent = TextEditingController();
   final r1Content = TextEditingController();
   final r2Content = TextEditingController();
   String message = "";
   bool isConnected = false;
-  bool r1 = false, r2 = false;
+  bool r1 = false, r2 = false, lcd = true;
   @override
   void initState() {
     super.initState();
+
+    prefs.then((value) => {
+          textContent.text = value.getString('ip') ?? '192.168.254.1',
+          debugPrint(value.getString('ip'))
+        });
   }
 
   //receiving and sending back a custom message
@@ -107,6 +114,9 @@ class _MyHomePageState extends State<MyHomePage> {
                           startConnection(textContent.text).then((value) => {
                                 setState(() {
                                   isConnected = value;
+                                  prefs.then((value) => {
+                                        value.setString('ip', textContent.text)
+                                      });
                                 })
                               });
                         } else {
@@ -251,6 +261,28 @@ class _MyHomePageState extends State<MyHomePage> {
                   ],
                 )
               ]),
+            ),
+            Container(
+              margin: const EdgeInsets.all(10),
+              child: ElevatedButton.icon(
+                  style: ButtonStyle(
+                      backgroundColor: MaterialStatePropertyAll<Color>(
+                          lcd ? Colors.lightGreen : Colors.redAccent)),
+                  onPressed: () {
+                    if (isConnected) {
+                      setState(() {
+                        if (!lcd) {
+                          lcd = true;
+                          socketConnection.sendMessage("8");
+                        } else {
+                          lcd = false;
+                          socketConnection.sendMessage("4");
+                        }
+                      });
+                    }
+                  },
+                  icon: Icon(lcd ? Icons.visibility : Icons.visibility_off),
+                  label: Text(lcd ? 'LCD ON' : 'LCD OFF')),
             )
           ],
         ),

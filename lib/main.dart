@@ -1,12 +1,15 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:tcp_socket_connection/tcp_socket_connection.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
-  runApp(MyApp());
+  runApp(const MyApp());
 }
 
 class MyApp extends StatelessWidget {
+  const MyApp({super.key});
+
   // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
@@ -16,43 +19,50 @@ class MyApp extends StatelessWidget {
         primarySwatch: Colors.blue,
         visualDensity: VisualDensity.adaptivePlatformDensity,
       ),
-      home: MyHomePage(title: 'Controller'),
+      home: const MyHomePage(title: 'Controller'),
     );
   }
 }
 
 class MyHomePage extends StatefulWidget {
-  MyHomePage({super.key, required this.title});
+  const MyHomePage({super.key, required this.title});
   final String title;
   @override
   _MyHomePageState createState() => _MyHomePageState();
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-  // Obtain shared preferences.
   final Future<SharedPreferences> prefs = SharedPreferences.getInstance();
   late TcpSocketConnection socketConnection;
   final textContent = TextEditingController();
   final r1Content = TextEditingController();
   final r2Content = TextEditingController();
-  String message = "";
+
   bool isConnected = false;
   bool r1 = false, r2 = false, lcd = true;
+  int t1Sec = 0, t1Min = 0, t2Sec = 0, t2Min = 0;
   @override
   void initState() {
     super.initState();
 
     prefs.then((value) => {
           textContent.text = value.getString('ip') ?? '192.168.254.1',
-          debugPrint(value.getString('ip'))
         });
   }
 
-  //receiving and sending back a custom message
   void messageReceived(String msg) {
-    setState(() {});
-
-    //socketConnection.sendMessage(1.toString());
+    setState(() {
+      int val = int.parse(msg);
+      if (val & 0xFF000000 == 0xFF000000) {
+        debugPrint('Time 1 update');
+      } else if (val & 0xFE000000 == 0xFE000000) {
+        debugPrint('Time 2 update');
+      } else {
+        r1 = val & 2 == 2;
+        r2 = val & 1 == 1;
+        lcd = val & 4 == 4;
+      }
+    });
   }
 
   //starting the connection and listening to the socket asynchronously
@@ -70,6 +80,11 @@ class _MyHomePageState extends State<MyHomePage> {
   // 2 = relay2 off
   // 3 = relay2 on
   @override
+  void dispose() {
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     double scrWidth = MediaQuery.of(context).size.width;
 
@@ -78,8 +93,8 @@ class _MyHomePageState extends State<MyHomePage> {
         title: Text(widget.title),
         centerTitle: true,
       ),
-      body: SafeArea(
-        child: Column(
+      body: ListView(children: [
+        Column(
           children: [
             Container(
               margin: const EdgeInsets.all(15),
@@ -141,6 +156,13 @@ class _MyHomePageState extends State<MyHomePage> {
                   BoxDecoration(border: Border.all(), color: Colors.blueGrey),
               margin: const EdgeInsets.all(15),
               child: Column(children: [
+                Container(
+                  margin: const EdgeInsets.all(5),
+                  child: const Text(
+                    'DEVICE 1',
+                    style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                  ),
+                ),
                 ElevatedButton.icon(
                     onPressed: () {
                       if (isConnected) {
@@ -204,6 +226,13 @@ class _MyHomePageState extends State<MyHomePage> {
                   BoxDecoration(border: Border.all(), color: Colors.blueGrey),
               margin: const EdgeInsets.all(15),
               child: Column(children: [
+                Container(
+                  margin: const EdgeInsets.all(5),
+                  child: const Text(
+                    'DEVICE 2',
+                    style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                  ),
+                ),
                 ElevatedButton.icon(
                     onPressed: () {
                       if (isConnected) {
@@ -283,10 +312,10 @@ class _MyHomePageState extends State<MyHomePage> {
                   },
                   icon: Icon(lcd ? Icons.visibility : Icons.visibility_off),
                   label: Text(lcd ? 'LCD ON' : 'LCD OFF')),
-            )
+            ),
           ],
         ),
-      ),
+      ]),
     );
   }
 }

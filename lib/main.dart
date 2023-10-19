@@ -37,7 +37,7 @@ class _MyHomePageState extends State<MyHomePage> {
   final textContent = TextEditingController();
   final r1Content = TextEditingController();
   final r2Content = TextEditingController();
-
+  Text msg = const Text('NO error!');
   bool isConnected = false;
   bool r1 = false, r2 = false, lcd = true;
   int t1Sec = 0, t1Min = 0, t2Sec = 0, t2Min = 0;
@@ -68,7 +68,7 @@ class _MyHomePageState extends State<MyHomePage> {
   //starting the connection and listening to the socket asynchronously
   Future<bool> startConnection(String ip) async {
     socketConnection = TcpSocketConnection(ip, 1322);
-    socketConnection.enableConsolePrint(true);
+
     if (await socketConnection.canConnect(5000, attempts: 3)) {
       await socketConnection.connect(5000, messageReceived, attempts: 3);
     }
